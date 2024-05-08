@@ -17,7 +17,7 @@ To install it without its tests, open a Workspace and DoIt:
    Feature require: #'Regex-Core'.
 ````
 
-Original port by German Arduino -- https://github.com/garduino
-Cuis updated based on port by Phil Bella -- https://github.com/pbella
-Updates integrated by Ken Dickey -- https://github.com/KenDickey
-Ported to Cuis 6.3 by Hernán Wilkinson -- https://github.com/hernanwilkinson
+- Original port by German Arduino -- https://github.com/garduino
+- Cuis updated based on port by Phil Bella -- https://github.com/pbella
+- Updates integrated by Ken Dickey -- https://github.com/KenDickey
+- Ported to Cuis 6.3 by Hernán Wilkinson -- https://github.com/hernanwilkinson
