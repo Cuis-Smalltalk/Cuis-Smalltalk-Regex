@@ -1,6 +1,6 @@
-'From Cuis6.3 [latest update: #6349] on 8 May 2024 at 7:36:17 pm'!
+'From Cuis6.3 [latest update: #6350] on 9 May 2024 at 9:38:04 am'!
 'Description Sincronized with Cuis 6.3'!
-!provides: 'Regex-Tests' 1 2!
+!provides: 'Regex-Tests' 1 4!
 !requires: 'Regex-Core' 1 5 nil!
 SystemOrganization addCategory: #'Regex-Tests-Core'!
 
@@ -23,16 +23,6 @@ TestCase subclass: #RxParserTest
 	category: 'Regex-Tests-Core'!
 !classDefinition: 'RxParserTest class' category: #'Regex-Tests-Core'!
 RxParserTest class
-	instanceVariableNames: ''!
-
-!classDefinition: #RxTerseGuide category: #'Regex-Tests-Core'!
-TerseGuideTopic subclass: #RxTerseGuide
-	instanceVariableNames: ''
-	classVariableNames: ''
-	poolDictionaries: ''
-	category: 'Regex-Tests-Core'!
-!classDefinition: 'RxTerseGuide class' category: #'Regex-Tests-Core'!
-RxTerseGuide class
 	instanceVariableNames: ''!
 
 
@@ -955,6 +945,16 @@ testMatchingRangesIn
 		self assert: range last = expected removeFirst ].
 	self assert: expected isEmpty! !
 
+!RxMatcherTest methodsFor: 'testing-protocol' stamp: 'KenD 11/25/2016 13:39:02'!
+testRemoveHTMLTags
+	"Remove HTML Tags"
+	
+	| regex html |
+	regex := '</?[0-9A-Za-z]+[^>]*>' asRegex.
+	html := '<a>foo<b>bar</b></a>'.
+	self assert: (regex copy: html replacingMatchesWith: '') = 'foobar'
+! !
+
 !RxMatcherTest methodsFor: 'testing-protocol' stamp: 'lr 1/15/2010 20:55'!
 testSubexpressionCount
 	| matcher |
@@ -1042,6 +1042,17 @@ testRegex004
 	self runRegex: #(':isVowel:'
 		'aei' true nil
 		'xyz' false nil)! !
+
+!RxMatcherTest methodsFor: 'testing' stamp: 'jmv 5/9/2024 09:37:45'!
+testRegex005
+	self runRegex: #('H(ä|ae?)ndel'
+		'Handel' true (1 'Handel')).
+	self runRegex: #('H(ä|ae?)ndel'
+		'Händel' true (1 'Händel')).
+	self runRegex: #('H(ä|ae?)ndel'
+		'Haendel' true (1 'Haendel')).
+	self runRegex: #('H(ä|ae?)ndel'
+		'Hendel' false (1 nil)).! !
 
 !RxMatcherTest methodsFor: 'testing-extensions' stamp: 'gsa 12/22/2012 12:26'!
 testStringAllRangesOfRegexMatches
@@ -1386,88 +1397,4 @@ set. Below are the examples of how to literally use them in a set:
 	self assert: ('0' matchesRegex: '[01^]').
 	
 	self assert: ('0' matchesRegex: '[0-9]').	
-	! !
-
-!RxTerseGuide methodsFor: 'as yet unclassified' stamp: 'NM 8/3/2021 19:25:42'!
-examples
-	^ {
-	 {#code -> '''hello123'' matchesRegex: ''he''  ' . #category -> ''.  
-	  #description -> '# => false !! The regex does not match ALL the string.' } as: Dictionary. 
-	
-	 {#code -> '''hello123'' matchesRegex: ''he.*'' '    . #category -> ''.  
-	  #description -> '# => ture !! The regex now can match ALL the string.' } as: Dictionary.       
-	 
-        {#code ->  ''' 2019-08-01T00:00:00+00:00'' allRegexMatches: ''\d+''. ' . #category -> ''.  
-	  #description -> '# => getting all numeric substrings.' } as: Dictionary.       
-    
-
-        }! !
-
-!RxTerseGuide methodsFor: 'as yet unclassified' stamp: 'NM 8/5/2021 11:20:06'!
-script
-	^ ' " 
-A detailed description of the package by its original author ''Vassili Bykov'' can be found in RxParser class category DOCUMENTATION. The following notes were written by ''Dr. Nicola Mingotti'' in a cookbook style to help you get started. 
-	
-Regular expressions, ''Regex'' for short, are used to capture text patterns and were popularized by the Perl programming language. When we compare to anything we compare to Perl style regex.  
-
-Caveats, for who already know Perl style regular expressions.
-. Here there isn''t a special syntax to create regexp, they are made calling a method on aString
-. The following regex delimiters {''^'', ''$'', ''\n''} are not recognized by Regex.
-. What Regex call ''string match'' is a full string match. To match a substring in Regex you say ''search''.
-. You must quote character $: as ''\:''
-. Non greedy syntax is not implemented ex:. ''.*?''
-. Limits are not implemented ex: ''\d{2,5}'' 
-
-=========================================
-============= Examples ==================== 
-========================================= "
-
-" . Does the string match a regex ? " 
-''hello123'' matchesRegex: ''he''.     " => false "
-''hello123'' matchesRegex: ''he.*''.   " => true "  
-
-". Find all occurrences of a regex "
-'' 2019-08-01T00:00:00+00:00'' allRegexMatches: ''\d+''.  
-" => an OrderedCollection(''2019'' ''08'' ''01'' ''00'' ''00'' ''00'' ''00'' ''00'') "
-
-". To ignore case there are appropriate methods as: matchesRegexIgnoringStringCase "
-
-" . Split a string "
-'','' asRegex split: ''123,c1,12.4 , Foo bar, baz''.
-" => an OrderedCollection(''123'' ''c1'' ''12.4 '' '' Foo bar'' '' baz'') "
-
-". Substitute each match with a given string " 
-''ab cd ab'' copyWithRegex: ''(a|b)+'' matchesReplacedWith: ''foo'' . 
-" => ''foo cd foo'' "
-
-". Substitute each match with the result of a method call "
-''ab cd ab'' copyWithRegex: ''(a|b)+'' matchesTranslatedUsing: [:each | each asUppercase] . 
-" => ''AB cd AB'' "
-
-". Grouping. Excuse the global vars ''str'' and ''rex'', better to run one line at a time in this case. "
-str _ ''Today is 05-Aug, it is about 09:34, and we are near Verona. '' . 
-str class. 
-rex _ ''(\d+)\:(\d+)''  asRegex . 
-rex class.                       " => RxMatcher "
-rex search: str.               " =>  true            # true, a match has been found. "
-rex subexpressionCount.  " => 3                 # number of elements matched. "
-rex subexpression: 1.       " =>  ''09:34''       # first element is always the whole match. "
-rex subexpression: 2.       " =>  ''09''           # then there are groups... "
-rex subexpression: 3.       " =>  ''34''                                              "
-
-"
-=======================================
-=======================================
-
-
-Dr. Nicola Mingotti - Aug 2021.
-"
-' 
-
-
-	! !
-
-!RxTerseGuide methodsFor: 'as yet unclassified' stamp: 'NM 8/3/2021 18:34:40'!
-title
-	^ 'Regex'
 	! !

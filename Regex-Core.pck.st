@@ -1,6 +1,6 @@
-'From Cuis6.3 [latest update: #6349] on 8 May 2024 at 7:36:35 pm'!
+'From Cuis6.3 [latest update: #6350] on 9 May 2024 at 9:38:01 am'!
 'Description Sincronized with Cuis 6.3'!
-!provides: 'Regex-Core' 1 5!
+!provides: 'Regex-Core' 1 6!
 !requires: 'Cuis-Base' 63 6349 nil!
 SystemOrganization addCategory: #'Regex-Core'!
 SystemOrganization addCategory: #'Regex-Core-Exceptions'!
@@ -69,7 +69,7 @@ RxMatchOptimizer class
 !classDefinition: #RxMatcher category: #'Regex-Core'!
 Object subclass: #RxMatcher
 	instanceVariableNames: 'matcher ignoreCase startOptimizer stream markerPositions markerCount lastResult'
-	classVariableNames: 'Cr Lf'
+	classVariableNames: ''
 	poolDictionaries: ''
 	category: 'Regex-Core'!
 !classDefinition: 'RxMatcher class' category: #'Regex-Core'!
@@ -491,18 +491,23 @@ addChar: aChar
 
 	elements add: (RxsCharacter with: aChar)! !
 
-!RxCharSetParser methodsFor: 'parsing' stamp: 'vb 4/11/09 21:56'!
+!RxCharSetParser methodsFor: 'parsing' stamp: 'jmv 5/9/2024 08:42:22'!
 addRangeFrom: firstChar to: lastChar
 
-	firstChar asInteger > lastChar asInteger ifTrue:
+	firstChar codePoint > lastChar codePoint ifTrue:
 		[RxParser signalSyntaxException: ' bad character range'].
 	elements add: (RxsRange from: firstChar to: lastChar)! !
 
-!RxCharSetParser methodsFor: 'parsing' stamp: 'vb 4/11/09 21:56'!
+!RxCharSetParser methodsFor: 'parsing' stamp: 'DF 10/21/2020 20:49:11'!
 match: aCharacter
 
 	aCharacter = lookahead
-		ifFalse: [RxParser signalSyntaxException: 'unexpected character: ', (String with: lookahead)].
+		ifFalse: [
+			RxParser signalSyntaxException:
+				(lookahead 
+					ifNil:['missing character']
+					ifNotNil:['unexpected character: ', (String with: lookahead)])
+			].
 	^source atEnd
 		ifTrue: [lookahead := nil]
 		ifFalse: [lookahead := source next]! !
@@ -585,7 +590,7 @@ canStartMatch: aCharacter in: aMatcher
 	aCharacter isNil ifTrue: [^true].
 	^testBlock == nil or: [testBlock value: aCharacter value: aMatcher]! !
 
-!RxMatchOptimizer methodsFor: 'accessing' stamp: 'vb 4/11/09 21:56'!
+!RxMatchOptimizer methodsFor: 'accessing' stamp: 'jmv 5/9/2024 08:36:42'!
 conditionTester
 	"#any condition is filtered at the higher level;
 	it cannot appear among the conditions here."
@@ -605,11 +610,11 @@ conditionTester
 	"More than one condition. Capture them as an array in scope."
 	matchCondition := conditions asArray.
 	^[:c :matcher |
-		matchCondition contains:
+		matchCondition anySatisfy:
 			[:conditionSelector |
 			matcher perform: conditionSelector]]! !
 
-!RxMatchOptimizer methodsFor: 'accessing' stamp: 'vb 4/11/09 21:56'!
+!RxMatchOptimizer methodsFor: 'accessing' stamp: 'jmv 5/9/2024 08:36:50'!
 methodPredicateTester
 	| p selector |
 	methodPredicates isEmpty ifTrue: [^nil].
@@ -624,9 +629,9 @@ methodPredicateTester
 		ifFalse: 
 			[[:char :m | 
 			RxParser doHandlingMessageNotUnderstood:
-				[p contains: [:sel | char perform: sel]]]]! !
+				[p anySatisfy: [:sel | char perform: sel]]]]! !
 
-!RxMatchOptimizer methodsFor: 'accessing' stamp: 'vb 4/11/09 21:56'!
+!RxMatchOptimizer methodsFor: 'accessing' stamp: 'jmv 5/9/2024 08:36:53'!
 nonMethodPredicateTester
 	| p selector |
 	nonMethodPredicates isEmpty ifTrue: [^nil].
@@ -640,9 +645,9 @@ nonMethodPredicateTester
 		ifFalse: 
 			[[:char :m | 
 			RxParser doHandlingMessageNotUnderstood:
-				[p contains: [:sel | (char perform: sel) not]]]]! !
+				[p anySatisfy: [:sel | (char perform: sel) not]]]]! !
 
-!RxMatchOptimizer methodsFor: 'private' stamp: 'HAW 5/7/2024 17:21:04'!
+!RxMatchOptimizer methodsFor: 'private' stamp: 'jmv 5/9/2024 08:36:46'!
 determineTestMethod
 	"Answer a block closure that will work as a can-match predicate.
 	Answer nil if no viable optimization is possible (too many chars would
@@ -660,9 +665,9 @@ determineTestMethod
 	testers isEmpty ifTrue: [^nil].
 	testers size = 1 ifTrue: [^testers first].
 	testers := testers asArray.
-	^[:char :matcher | testers contains: [:t | t value: char value: matcher]]! !
+	^[:char :matcher | testers anySatisfy: [:t | t value: char value: matcher]]! !
 
-!RxMatchOptimizer methodsFor: 'private' stamp: 'vb 4/11/09 21:56'!
+!RxMatchOptimizer methodsFor: 'private' stamp: 'jmv 5/9/2024 08:36:57'!
 nonPredicateTester
 
 	| p pred |
@@ -673,7 +678,7 @@ nonPredicateTester
 			[pred := p first.
 			[:char :matcher | (pred value: char) not]]
 		ifFalse: 
-			[[:char :m | p contains: [:some | (some value: char) not]]]! !
+			[[:char :m | p anySatisfy: [:some | (some value: char) not]]]! !
 
 !RxMatchOptimizer methodsFor: 'private' stamp: 'vb 4/11/09 21:56'!
 nonPrefixTester
@@ -695,7 +700,7 @@ optimizeSet: aSet
 
 	^aSet size < 10 ifTrue: [aSet asArray] ifFalse: [aSet]! !
 
-!RxMatchOptimizer methodsFor: 'private' stamp: 'vb 4/11/09 21:56'!
+!RxMatchOptimizer methodsFor: 'private' stamp: 'jmv 5/9/2024 08:37:01'!
 predicateTester
 
 	| p pred |
@@ -706,9 +711,9 @@ predicateTester
 			[pred := p first.
 			[:char :matcher | pred value: char]]
 		ifFalse: 
-			[[:char :m | p contains: [:some | some value: char]]]! !
+			[[:char :m | p anySatisfy: [:some | some value: char]]]! !
 
-!RxMatchOptimizer methodsFor: 'private' stamp: 'vb 4/11/09 21:56'!
+!RxMatchOptimizer methodsFor: 'private' stamp: 'jmv 5/9/2024 08:50:47'!
 prefixTester
 
 	| p prefixChar |
@@ -719,7 +724,7 @@ prefixTester
 		ifTrue: 
 			[prefixChar := p first.
 			ignoreCase
-				ifTrue: [[:char :matcher | char sameAs: prefixChar]]
+				ifTrue: [[:char :matcher | char asUppercase = prefixChar]]
 				ifFalse: [[:char :matcher | char = prefixChar]]]
 		ifFalse:
 			[ignoreCase
@@ -952,10 +957,10 @@ tryMatch
 	"this is a duplicate"
 	^ lastResult := false! !
 
-!RxMatcher methodsFor: 'testing' stamp: 'lr 1/15/2010 21:12'!
+!RxMatcher methodsFor: 'testing' stamp: 'KenD 11/25/2016 16:06:50'!
 atBeginningOfLine
 
-	^self position = 0 or: [self lastChar = Cr]! !
+	^self position = 0 or: [self lastChar isLineSeparator]! !
 
 !RxMatcher methodsFor: 'testing' stamp: 'lr 1/15/2010 21:12'!
 atBeginningOfWord
@@ -963,10 +968,10 @@ atBeginningOfWord
 	^(self isWordChar: self lastChar) not
 		and: [self isWordChar: stream peek]! !
 
-!RxMatcher methodsFor: 'testing' stamp: 'vb 4/11/09 21:56'!
+!RxMatcher methodsFor: 'testing' stamp: 'KenD 11/25/2016 16:07:03'!
 atEndOfLine
 
-	^self atEnd or: [stream peek = Cr]! !
+	^self atEnd or: [stream peek isLineSeparator]! !
 
 !RxMatcher methodsFor: 'testing' stamp: 'lr 1/15/2010 21:12'!
 atEndOfWord
@@ -1316,13 +1321,13 @@ initialize: syntaxTreeRoot ignoreCase: aBoolean
 	self buildFrom: syntaxTreeRoot.
 	startOptimizer := RxMatchOptimizer new initialize: syntaxTreeRoot ignoreCase: aBoolean! !
 
-!RxMatcher methodsFor: 'double dispatch' stamp: 'vb 4/11/09 21:56'!
+!RxMatcher methodsFor: 'double dispatch' stamp: 'jmv 5/9/2024 08:42:32'!
 syntaxAny
 	"Double dispatch from the syntax tree. 
 	Create a matcher for any non-null character."
 
 	^RxmPredicate new
-		predicate: [:char | char asInteger ~= 0]! !
+		predicate: [:char | char codePoint ~= 0]! !
 
 !RxMatcher methodsFor: 'double dispatch' stamp: 'vb 4/11/09 21:56'!
 syntaxBeginningOfLine
@@ -1372,7 +1377,7 @@ syntaxCharSet: charSetNode
 
 	^RxmPredicate with: (charSetNode predicateIgnoringCase: ignoreCase)! !
 
-!RxMatcher methodsFor: 'double dispatch' stamp: 'vb 4/11/09 21:56'!
+!RxMatcher methodsFor: 'double dispatch' stamp: 'jmv 5/9/2024 08:52:00'!
 syntaxCharacter: charNode
 	"Double dispatch from the syntax tree. 
 	We get here when no merging characters into strings was possible."
@@ -1381,7 +1386,7 @@ syntaxCharacter: charNode
 	wanted := charNode character.
 	^RxmPredicate new predicate: 
 		(ignoreCase
-			ifTrue: [[:char | char sameAs: wanted]]
+			ifTrue: [[:char | char asUppercase = wanted asUppercase]]
 			ifFalse: [[:char | char = wanted]])! !
 
 !RxMatcher methodsFor: 'double dispatch' stamp: 'vb 4/11/09 21:56'!
@@ -1501,12 +1506,6 @@ forString: aString ignoreCase: aBoolean
 	`aString'."
 
 	^self for: (RxParser new parse: aString) ignoreCase: aBoolean! !
-
-!RxMatcher class methodsFor: 'class initialization' stamp: 'avi 11/30/2003 13:30'!
-initialize
-	"RxMatcher initialize"
-	Cr := Character cr.
-	Lf := Character lf.! !
 
 !RxParser methodsFor: 'recursive descent' stamp: 'vb 4/11/09 21:56'!
 atom
@@ -2582,8 +2581,26 @@ comp.lang.smalltalk or comp.lang.lisp.
 
 	self error: 'comment only'! !
 
-!RxParser class methodsFor: 'DOCUMENTATION' stamp: 'vb 4/11/09 21:56'!
+!RxParser class methodsFor: 'DOCUMENTATION' stamp: 'jmv 5/9/2024 09:17:41'!
 f: x boringStuff: xx
+"
+The Regular Expression Matcher (``The Software'') 
+is Copyright (C) 1996, 1999 Vassili Bykov.  
+It is provided to the Smalltalk community in hope it will be useful.
+
+Distributed subject to the MIT License. See https://mit-license.org.
+Any contribution must also be under the MIT license."
+"
+On Wed 08-May-2024, Vassili stated:
+
+Hi All,
+
+I'll be happy with changing the license to MIT if that makes life easier for everybody. Please consider this my official permission to do so. I remember a while ago Andreas Raab asked me the same question in the context of Pharo, and I gave pretty much the same answer. To be honest, I don't remember where the special license comes from. :)
+
+Cheers,
+--Vassili
+"
+"What follows is the original licensing terms from Vassili, (superseded on 08-May-2024 by the MIT license, as noted above):"
 "
 The Regular Expression Matcher (``The Software'') 
 is Copyright (C) 1996, 1999 Vassili Bykov.  
@@ -2893,10 +2910,10 @@ matchAgainst: aMatcher
 	^(aMatcher perform: matchSelector)
 		and: [next matchAgainst: aMatcher]! !
 
-!RxmSubstring methodsFor: 'initialize-release' stamp: 'vb 4/11/09 21:56'!
+!RxmSubstring methodsFor: 'initialize-release' stamp: 'jmv 5/9/2024 08:52:29'!
 beCaseInsensitive
 
-	compare := [:char1 :char2 | char1 sameAs: char2]! !
+	compare := [:char1 :char2 | char1 asUppercase = char2 asUppercase]! !
 
 !RxmSubstring methodsFor: 'initialize-release' stamp: 'vb 4/11/09 21:56'!
 beCaseSensitive
@@ -3041,10 +3058,10 @@ dispatchTo: aMatcher
 
 	^aMatcher syntaxCharSet: self! !
 
-!RxsCharSet methodsFor: 'accessing' stamp: 'vb 4/11/09 21:56'!
+!RxsCharSet methodsFor: 'accessing' stamp: 'jmv 5/9/2024 08:37:05'!
 hasPredicates
 
-	^elements contains: [:some | some isEnumerable not]! !
+	^elements anySatisfy: [:some | some isEnumerable not]! !
 
 !RxsCharSet methodsFor: 'accessing' stamp: 'vb 4/11/09 21:56'!
 predicateIgnoringCase: aBoolean
@@ -3100,7 +3117,7 @@ optimalSetIgnoringCase: aBoolean
 		ifTrue: [set asArray]
 		ifFalse: [set]! !
 
-!RxsCharSet methodsFor: 'privileged' stamp: 'vb 4/11/09 21:56'!
+!RxsCharSet methodsFor: 'privileged' stamp: 'jmv 5/9/2024 08:37:09'!
 predicatePartPredicate
 	"Answer a predicate that tests all of my elements that cannot be
 	enumerated."
@@ -3116,9 +3133,9 @@ predicatePartPredicate
 	predicates := predicates collect: [:each | each predicate].
 	^negated
 		ifFalse:
-			[[:char | predicates contains: [:some | some value: char]]]
+			[[:char | predicates anySatisfy: [:some | some value: char]]]
 		ifTrue:
-			[[:char | (predicates contains: [:some | some value: char]) not]]! !
+			[[:char | (predicates anySatisfy: [:some | some value: char]) not]]! !
 
 !RxsCharSet methodsFor: 'initialize-release' stamp: 'vb 4/11/09 21:56'!
 initializeElements: aCollection negated: aBoolean
@@ -3400,11 +3417,11 @@ beBackslash
 	predicate := [:char | char == $\].
 	negation := [:char | char ~~ $\]! !
 
-!RxsPredicate methodsFor: 'initialize-release' stamp: 'vb 4/11/09 21:56'!
+!RxsPredicate methodsFor: 'initialize-release' stamp: 'jmv 5/9/2024 08:42:38'!
 beControl
 
-	predicate := [:char | char asInteger < 32].
-	negation := [:char | char asInteger >= 32]! !
+	predicate := [:char | char codePoint < 32].
+	negation := [:char | char codePoint >= 32]! !
 
 !RxsPredicate methodsFor: 'initialize-release' stamp: 'vb 4/11/09 21:56'!
 beDigit
@@ -3585,11 +3602,11 @@ initializeNamedClassSelectors
 		at: 'upper' put: #beUppercase;
 		at: 'xdigit' put: #beHexDigit! !
 
-!RxsRange methodsFor: 'accessing' stamp: 'HAW 5/7/2024 17:25:13'!
+!RxsRange methodsFor: 'accessing' stamp: 'jmv 5/9/2024 08:42:48'!
 enumerateTo: aSet ignoringCase: aBoolean
 	"Add all of the elements I represent to the collection."
 
-	first asInteger to: last asInteger do:
+	first codePoint to: last codePoint do:
 		[:charCode | | character |
 		character := Character codePoint: charCode.
 		aBoolean
@@ -3642,27 +3659,6 @@ initializeBranch: aBranch regex: aRegex
 isNullable
 
 	^branch isNullable or: [regex notNil and: [regex isNullable]]! !
-
-!Character methodsFor: '*Regex-Core' stamp: 'NM 8/2/2021 18:34:24'!
-asInteger
-	"From Squeak"
-	"Answer the receiver's character code."
-	<primitive: 171>
-	^self primitiveFailed! !
-
-!Character methodsFor: '*Regex-Core' stamp: 'NM 8/2/2021 18:32:35'!
-sameAs: aCharacter
-	"From Squeak Answer whether the receiver is equal to aCharacter, ignoring case"
-	self == aCharacter ifTrue: [ ^true ].
-	^self asLowercase == aCharacter asLowercase
-	
-! !
-
-!Collection methodsFor: '*Regex-Core' stamp: 'NM 8/2/2021 18:47:18'!
-contains: aBlock
-       "From Squeak. "
-	"VW compatibility"
-	^self anySatisfy: aBlock! !
 
 !String methodsFor: '*Regex-Core' stamp: 'gsa 12/20/2012 10:31'!
 allRangesOfRegexMatches: rxString
@@ -3751,11 +3747,5 @@ regex: rxString matchesCollect: aBlock
 regex: rxString matchesDo: aBlock
 
 	^rxString asRegex matchesIn: self do: aBlock! !
-
-!String methodsFor: '*Regex-Core' stamp: 'gsa 12/20/2012 10:36'!
-search: aString
-	"compatibility method to make regexp and strings work polymorphicly"
-	^ aString includesSubString: self! !
-RxMatcher initialize!
 RxParser initialize!
 RxsPredicate initialize!
