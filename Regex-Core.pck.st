@@ -1,6 +1,6 @@
 'From Cuis6.3 [latest update: #6350] on 9 May 2024 at 9:38:01 am'!
 'Description Regular Expressions'!
-!provides: 'Regex-Core' 1 7!
+!provides: 'Regex-Core' 1.0.7!
 !requires: 'Cuis-Base' '7.9.8257' '7.*.*'!
 SystemOrganization addCategory: #'Regex-Core'!
 SystemOrganization addCategory: #'Regex-Core-Exceptions'!
